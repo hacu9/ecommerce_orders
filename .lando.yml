@@ -1,0 +1,4 @@
+name: garagroup
+recipe: laravel
+config:
+  webroot: public
