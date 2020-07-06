@@ -1,62 +1,125 @@
 <template>
   <v-container>
-    <v-tabs fixed-tabs v-model="tab">
-      <v-tab>Pendents</v-tab>
-      <v-tab>Asignades</v-tab>
-      <v-tab>Completades</v-tab>
+    <v-tabs v-model="tab">
+      <v-tab>Delivered</v-tab>
+      <v-tab>In Progress</v-tab>
     </v-tabs>
     <v-skeleton-loader :loading="isViewLoading" transition="scale" group height="420" type="table">
       <v-card>
-        <v-toolbar>
-          <v-toolbar-title>Orders</v-toolbar-title>
-          <v-spacer></v-spacer>
-          <v-text-field
-            append-icon="search"
-            :label="quickSearch"
-            single-line
-            v-model="search"
-            hide-details
-          ></v-text-field>
-          <v-spacer></v-spacer>
+        <v-row style="background-color: #272727;" align="center">
+          <v-col cols="12" xs="12" md="4">Orders</v-col>
+          <v-col cols="12" xs="12" md="4">
+            <v-text-field
+              append-icon="mdi-magnify"
+              label="Search"
+              single-line
+              v-model="search"
+              hide-details
+            ></v-text-field>
+          </v-col>
+          <v-col class="text-right" cols="12" md="2" offset-md="2">
             <v-tooltip bottom>
               <template v-slot:activator="{ on }">
                 <v-btn @click="deleteMultiple" v-on="on" small fab color="error">
-                  <v-icon dark>delete_sweep</v-icon>
+                  <v-icon dark>mdi-delete-sweep</v-icon>
                 </v-btn>
               </template>
-              <span>Borrar Multiples</span>
+              <span>Delete multiple</span>
             </v-tooltip>
-        </v-toolbar>
+          </v-col>
+        </v-row>
         <v-card-text>
           <v-data-table
             :loading="isViewLoading"
             :headers="headers"
             :items="activeItems"
             :search="search"
+            :single-expand="true"
+            show-expand
+            :expanded.sync="expanded"
             show-select
             v-model="selected"
             ref="content"
           >
             <v-progress-linear slot="progress" color="blue darken-4" indeterminate></v-progress-linear>
-            <template v-slot:item.picture="{ item }">
-              <v-avatar class="profile">
-                <v-img :src="item.picture"></v-img>
-              </v-avatar>
+
+            <template v-slot:item.status="{ item }">
+              <v-chip
+                :color="item.status ? 'success' : 'secondary'"
+              >{{item.status ? 'Delivered' : 'Pending' }}</v-chip>
             </template>
+
+            <template v-slot:item.total="{ item }">{{item.total.symbol}}{{item.total.amount}}</template>
+            <template v-slot:item.created_at="{ item }">{{item.created_at|formatDate}}</template>
+
             <template v-slot:item.action="{ item }">
-              <template v-if="$auth.check('crud tasks')">
-                <v-icon small class="mr-2" @click="editItem(item)">edit</v-icon>
+              <template>
                 <v-icon
-                  small
                   class="mr-2"
                   @click="
                                         $router.push({
-                                            name: 'tasks_show',
-                                            params: { id: item.id }
+                                            name: 'orders_show',
+                                            params: { id: item.order_number }
                                         })
                                     "
-                >remove_red_eye</v-icon>
+                >mdi-text-box-search</v-icon>
               </template>
+            </template>
+
+            <template v-slot:expanded-item="{ headers, item }">
+              <td :colspan="headers.length">
+                <v-row align="stretch">
+                  <v-col
+                    :key="product.id"
+                    v-for="(product, index) in item.products"
+                    cols="12"
+                    md="4"
+                  >
+                    <v-card
+                      class="mx-auto elevation-20"
+                      color="primary"
+                      dark
+                      style="max-width: 400px;"
+                    >
+                      <v-row justify="space-between">
+                        <v-col cols="12" md="7">
+                          <v-card-title primary-title>
+                            <div>
+                              <div class="text-h6">{{product.name}}</div>
+                              <div class="text-body-1">
+                                Sold by<v-chip color="secondary">{{product.sold_by}}</v-chip>
+                              </div>
+                              {{product.price.symbol}}{{product.price.amount}}
+                            </div>
+                          </v-card-title>
+                        </v-col>
+                        <v-col cols="12" md="5">
+                          <v-img
+                            class="shrink ma-2"
+                            contain
+                            :src="`https://picsum.photos/300/300?image=${index}`"
+                          ></v-img>
+                        </v-col>
+                      </v-row>
+                      <v-divider dark></v-divider>
+                      <v-card-actions class="pa-4">
+                        Rate this product
+                        <v-spacer></v-spacer>
+                        <span class="grey--text text--lighten-2 caption mr-2">({{ product.rating }})</span>
+                        <v-rating
+                          v-model="product.rating"
+                          background-color="white"
+                          color="yellow accent-4"
+                          dense
+                          half-increments
+                          hover
+                          size="18"
+                        ></v-rating>
+                      </v-card-actions>
+                    </v-card>
+                  </v-col>
+                </v-row>
+              </td>
             </template>
           </v-data-table>
         </v-card-text>
@@ -66,38 +129,29 @@
 </template>
 
 <script>
+import { mapState } from "vuex";
+import filterMixin from "@/mixins/filters";
 export default {
+  mixins: [filterMixin],
   components: {},
   data() {
     return {
       tab: 0,
       headers: [
         {
-          text: "Pacient",
-          value: "patient.full_name"
+          text: "Order Number",
+          value: "order_number"
         },
         {
-          text: "Inici",
-          value: "start_date"
+          text: "Status",
+          value: "status"
         },
         {
-          text: "Finalització",
-          value: "end_date"
+          text: "Total",
+          value: "total"
         },
         {
-          text: "Treballador",
-          value: "worker"
-        },
-        {
-          text: "Tipus de visita",
-          value: "visit_type"
-        },
-        {
-          text: "Descripció",
-          value: "description"
-        },
-        {
-          text: "Creado",
+          text: "Ordered",
           value: "created_at"
         },
         {
@@ -109,7 +163,8 @@ export default {
       ],
       search: null,
       items: [],
-      selected:[]
+      selected: [],
+      expanded: []
     };
   },
   created() {
@@ -121,47 +176,27 @@ export default {
         ? this.items.filter(x => x.status == this.status)
         : [];
     },
-    // status() {
-    //   if (this.tab == 0) {
-    //     return "pendents";
-    //   } else if (this.tab == 1) {
-    //     return "asignades";
-    //   } else if (this.tab == 2) {
-    //     return "completades";
-    //   }
-    // }
+    ...mapState(["isViewLoading"]),
+    status() {
+      return this.tab == 0 ? 1 : 0; //delivered or pending
+    }
   },
   methods: {
     initialize() {
       this.$store.commit("setViewLoading", true);
-      this.axios.get("/orders/2").then(resp => {
+      this.axios.get("/orders").then(resp => {
         this.items = resp.data;
         this.$store.commit("setViewLoading", false);
       });
     },
     deleteItem(item) {
       const index = this.items.indexOf(item);
-      if (
-        confirm(
-          `Estás seguro de que deseas eliminar este proveidor? ${item.name}`
-        )
-      ) {
-        // xiboapi.delete(`/library/${item.mediaId}`).then(resp => {
-        this.axios
-          .delete(`/tasks/${item.id}`)
-          .then(() => {
-            this.items.splice(index, 1);
-          })
-          .catch(() => {
-            alert("No se puede eliminar el proveidor");
-          });
-        // });
-      }
+      this.items.splice(index, 1);
     },
     async deleteMultiple() {
       if (!this.selected.length > 0) {
         this.$store.commit("showSnackbar", {
-          text: "Elije al menos uno",
+          text: "Select at least one item",
           color: "error"
         });
         return;
@@ -172,7 +207,7 @@ export default {
       }
 
       this.$store.commit("showSnackbar", {
-        text: "Realizado con excito",
+        text: "Deleted Orders",
         color: "success"
       });
     }

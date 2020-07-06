@@ -21,5 +21,6 @@ use Illuminate\Support\Facades\Route;
 Route::group([
     'namespace' => 'Api',
 ], function () {
-    Route::get('orders/{order}','OrderController@index');
+    Route::get('orders','OrderController@index');
+    Route::get('orders/{id}','OrderController@show');
 });

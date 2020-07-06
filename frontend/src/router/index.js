@@ -11,15 +11,15 @@ const routes = [
         component: () => import("../views/orders/Index.vue")
     },
     {
-        path: "/:id",
+        path: "/orders/:id",
         name: "orders_show",
         // meta: { auth: true },
         component: () => import("../views/orders/Show.vue")
-    },
+    }
 ];
 
 const router = new VueRouter({
-  routes
+    routes
 });
 
 export default router;

@@ -22,7 +22,7 @@ class OrderController extends Controller
     public function index()
     {
         // $this->orders)->orders[0]->amount_product
-         return response()->json($this->orders);
+         return response()->json($this->orders->orders);
     }
 
     /**
@@ -54,7 +54,8 @@ class OrderController extends Controller
      */
     public function show($id)
     {
-        //
+        $order = collect($this->orders->orders)->firstWhere('order_number', $id);
+        return response()->json($order);
     }
 
     /**
